@@ -21,11 +21,14 @@ if ! (ip rule list | grep -q $table); then ip rule add iif $iface lookup $table;
 sysctl net.ipv4.ip_forward=1
 
 case $action in
+  haproxy)
+    logger -t keepalived-notify-$action "Ensuring haproxy APIPA bind for $vip"
+    ip addr add $src/32 dev lo
+    ;;& # Check remaining patterns
   add|haproxy)
     logger -t keepalived-notify-$action "Removing local route for $vip"
     ip route del table local local $vip
-    ;;& # Check remaining patterns
-  add)
+
     logger -t keepalived-notify-$action "Adding VIP NATs for $vip"
     while ! iptables -t nat -I PREROUTING -d $vip/32 -j DNAT --to-dest $src; do sleep 1; done
     while ! iptables -t nat -I OUTPUT -d $vip/32 -j DNAT --to-dest $src; do sleep 1; done
