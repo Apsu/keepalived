@@ -22,24 +22,27 @@ sysctl net.ipv4.ip_forward=1
 
 case $action in
   haproxy)
-    logger -t keepalived-notify-$action "Adding haproxy route for $vip"
-    ip route add $vip/32 dev lo src $src
+    logger -t keepalived-notify-$action "Adding haproxy APIPA bindpoint for $vip"
+    # This will always exist but only haproxy $action knows the right $src
+    ip addr add $src/32 dev lo
+
+    logger -t keepalived-notify-$action "Adding haproxy remote SNAT for $vip"
+    while ! iptables -t nat -I POSTROUTING -o $iface -s $src -j MASQUERADE; do sleep 1; done
     ;;& # Check remaining patterns
   add|haproxy)
     logger -t keepalived-notify-$action "Removing local route for $vip"
     ip route del table local local $vip
-    ;;& # Check remaining patterns
-  add)
+
     logger -t keepalived-notify-$action "Adding VIP NATs for $vip"
     while ! iptables -t nat -I PREROUTING -d $vip/32 -j DNAT --to-dest $src; do sleep 1; done
     while ! iptables -t nat -I OUTPUT -d $vip/32 -j DNAT --to-dest $src; do sleep 1; done
     ;;
   del)
-    logger -t keepalived-notify-$action "Deleting haproxy route for $vip"
-    ip route del $vip/32 dev lo src $src
-
     logger -t keepalived-notify-$action "Deleting VIP NATs for $vip"
     iptables -t nat -D PREROUTING -d $vip/32 -j DNAT --to-dest $src
     iptables -t nat -D OUTPUT -d $vip/32 -j DNAT --to-dest $src
+
+    logger -t keepalived-notify-$action "Deleting haproxy SNAT for $vip"
+    iptables -t nat -D POSTROUTING -o $iface -s $src -j MASQUERADE
     ;;
 esac
