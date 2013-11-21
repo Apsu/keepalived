@@ -35,6 +35,9 @@ case $action in
     while ! iptables -t nat -I OUTPUT -d $vip/32 -j DNAT --to-dest $src; do sleep 1; done
     ;;
   del)
+    logger -t keepalived-notify-$action "Deleting haproxy route for $vip"
+    ip route del $vip/32 dev lo src $src
+
     logger -t keepalived-notify-$action "Deleting VIP NATs for $vip"
     iptables -t nat -D PREROUTING -d $vip/32 -j DNAT --to-dest $src
     iptables -t nat -D OUTPUT -d $vip/32 -j DNAT --to-dest $src
