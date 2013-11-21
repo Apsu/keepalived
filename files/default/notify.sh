@@ -23,7 +23,7 @@ sysctl net.ipv4.ip_forward=1
 case $action in
   haproxy)
     logger -t keepalived-notify-$action "Adding haproxy route for $vip"
-    ip route add $vip/32 via $src dev $iface
+    ip route add $vip/32 dev lo src $src
     ;;& # Check remaining patterns
   add|haproxy)
     logger -t keepalived-notify-$action "Removing local route for $vip"
